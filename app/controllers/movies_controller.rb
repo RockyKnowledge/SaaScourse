@@ -1,8 +1,8 @@
 class MoviesController < ApplicationController
 
   def initialize
-    @all_ratings = Movie.find_all_ratings 
-    super  
+        @all_ratings = Movie.all_ratings
+        super
   end
 
   def show
@@ -11,23 +11,41 @@ class MoviesController < ApplicationController
     # will render app/views/movies/show.<extension> by default
   end  
  
-  def index 
-    @sort = params[:sort]
-    
-    if params[:ratings]
-    	@ratings = params[:ratings]
-    else
-	@all_ratings.each do |rat|
-            (@ratings ||= { })[rat] = 1
+  def index
+        redirect = false
+
+        if params[:sort]
+            @sorting = params[:sort]
+        elsif session[:sort]
+            @sorting = session[:sort]
+            redirect = true
         end
+
+        if params[:ratings]
+            @ratings = params[:ratings]
+        elsif session[:ratings]
+            @ratings = session[:ratings]
+            redirect = true
+        else
+            @all_ratings.each do |rat|
+                (@ratings ||= { })[rat] = 1
+            end
+            redirect = true
+        end
+
+        if redirect
+            redirect_to movies_path(:sort => @sorting, :ratings => @ratings)
+        end
+
+        Movie.find(:all, :order => @sorting ? @sorting : :id).each do |mv|
+            if @ratings.keys.include? mv[:rating]
+                (@movies ||= [ ]) << mv
+            end
+        end
+
+        session[:sort]    = @sorting
+        session[:ratings] = @ratings
     end
-    
-    Movie.find(:all, :order => @sort ? @sort : :id).each do |mv|
-        if @ratings.keys.include? mv[:rating]
-             (@movies ||= [ ]) << mv
-        end
-      end
-  end
 
   def new
     # default: render 'new' template
